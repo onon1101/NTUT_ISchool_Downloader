@@ -1,6 +1,4 @@
-from cmath import log
-from ftplib import ftpcp
-from tkinter import E
+
 from bs4 import BeautifulSoup
 from contextlib import closing
 import requests
