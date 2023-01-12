@@ -1,4 +1,4 @@
-import os
+import os, sys
 import threading
 import requests
 import json
@@ -9,8 +9,9 @@ from queue import Queue
 
 
 q = Queue()
-fileSize = [i*0 for i in range(10)]
 name = [i*0 for i in range(10)]
+fileSize = [i*0 for i in range(10)]
+current_download_status = [i*0 for i in range(10)]
 
 user_header = {
 	"Accept"           : "text/html,application/xhtml+xml,application/xml;\
@@ -59,21 +60,20 @@ def download(index,videoUrl,fileName,LoaclPath):
                     len(data)]
                 )
 
-                    
-        #name[ThreagNumber].close()
         file.close()
-        
-
-        # input("按任意建結束");
+        sys.exit()
         
 
 #進度條累加計算
-def progressBar(q:list,progrgessBraName):
+def progressBar(q):
+    global current_download_status
+
     threadingName = int(q[0])
     packageSize = q[1]
 
     #增加進度條的進度
     name[threadingName].update(1024)
+    current_download_status[threadingName] += 1024
 
 
 #主要功能區
@@ -85,6 +85,7 @@ def downloadMain(data:list,fileName,LocalPath):
     
     #編號跟資料的生成 ex: (1,'data')
     data = list(enumerate(data))
+
 
     for i in range(DataTotal):
         
@@ -106,7 +107,6 @@ def downloadMain(data:list,fileName,LocalPath):
         if name[i] == 0:
 
             #將進度條的空位補滿            
-            # ProgressBarName = fileName[i].split(' ')[1]
             ProgressBarName = fileName[i]
             if len(ProgressBarName) <=26:
                 ProgressBarName = ProgressBarName + " "*3
@@ -116,23 +116,28 @@ def downloadMain(data:list,fileName,LocalPath):
             
             
     #開始計算進度
-    
-    while True:
-        if threading.active_count()<=2:
-            os.system('cls')
-            print("已完成下載")
-            break
-        else:
-            progressBar(q.get(),name)
+    while any(fileSize[i] > current_download_status[i] for i in range(len(fileSize))):
+            progressBar(q.get())
 
 
 if __name__ =="__main__":
     with open('data.json') as file:
         data = json.load(file)['web']
     datalist= []
-
-    fileName = 0
+    path = "北科i學園資料\微積分"
+    fileName = ['[錄] 12291329_src_presenter.mp4', '[錄] 01040827_src_presenter.mp4', '[錄] 01051320_src_presenter.mp4']
+    
     for i in data:
         datalist.append(i)
-    # print(list(enumerate(datalist)))
-    downloadMain(datalist,fileName)
+    
+    downloadMain(datalist,fileName, path)
+    # print(threading.active_count())
+    os.system('cls')
+    print("下載完成, ", end='')
+    input("按任意建結束");
+    
+    try:
+        os._exit(0)
+    
+    except:
+        print('子程序出現錯誤')

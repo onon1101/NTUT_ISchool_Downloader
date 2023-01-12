@@ -323,6 +323,6 @@ for index,file_item in enumerate(file_list):
 						
 os.system('cls')
 downloadMain(video_list,videoName,store_location) #呼叫download.py 裡面的函數
+# print(video_list,videoName,store_location)
 
-
-input("按任意建結束");
+# input("按任意建結束");
