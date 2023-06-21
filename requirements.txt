@@ -1,0 +1,6 @@
+bs4 == 0.0.1
+requests == 2.29.0
+pyDes == 2.0.1
+pycryptodomex == 0.18.0
+lxml == 4.9.2
+tqdm == 4.65.0

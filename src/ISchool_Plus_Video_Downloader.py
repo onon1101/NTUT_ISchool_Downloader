@@ -1,3 +1,4 @@
+
 from bs4 import BeautifulSoup
 from contextlib import closing
 import requests
@@ -8,9 +9,16 @@ import sys
 import os
 import re
 import hashlib
-from PrettyPrint import *
-from MyEncrypt import *
-from ProgressBar import *
+# from module import PrettyPrint
+# from module.MyEncrypt import *
+# from module.ProgressBar import *
+# from module.download import downloadMain #引入download.py
+from module.PrettyPrint import *
+from module.MyEncrypt import *
+from module.ProgressBar import *
+from module.download import downloadMain #引入download.py
+from module.remove import removeFile
+import urllib.parse
 
 dirname = "北科i學園資料"
 #-------------------------創建資料夾-------------------------#
@@ -78,6 +86,7 @@ post_data = {
 url     = "https://nportal.ntut.edu.tw/login.do"  #登入網址
 
 login = res.post(url , data = post_data )
+url 
 
 if "myPortal.do" in login.text:
 	loginpass = True
@@ -85,15 +94,17 @@ if "myPortal.do" in login.text:
 	url_start += 1
 	url_end   = login.text.find('"' , url_start)
 	url_jump = login.text[url_start:url_end]
-	print ("登入成功")
+	print ("登入成功") 
 	
 elif "帳號或密碼錯誤" in login.text:
 	input ("帳號或密碼錯誤")
+	removeFile();
 	exit()
 else:
-	login_fail_time += 1;
-	input ("失敗{0}次嘗試重新登入" .format(login_fail_time) )
-	exit()
+	pass
+	# login_fail_time += 1
+	# input ("失敗{0}次嘗試重新登入" .format(login_fail_time) )
+	# exit()
 
 print("登入IShool Plus系統")
 url = "https://nportal.ntut.edu.tw/ssoIndex.do?apUrl=https://istudy.ntut.edu.tw/login.php&apOu=ischool_plus_&sso=true&datetime1=1582549002044"
@@ -115,48 +126,6 @@ for item in getsessionId:
 
 result = res.post(url  , data = post_data )
 
-'''
-print("登入IShool Plus系統")
-
-url = "https://istudy.ntut.edu.tw/mooc/login.php"
-#取得登入資料
-title = res.get(url)
-soup = BeautifulSoup(title.text, 'html.parser')
-
-form = soup.find_all('form')
-
-items = form[2].find_all("input")
-for item in items:
-	if item.get("name") == "login_key":
-		login_key = item.get("value")
-
-data = inputpassword
-md5 = hashlib.md5()
-md5.update(data.encode("utf-8"))
-md5key = md5.hexdigest()
-cypkey  = md5key[0:4] + login_key[0:4];
-
-
-
-encrypt_pwd = DesEncrypt(inputpassword, cypkey)
-encrypt_pwd = encrypt_pwd.decode("utf-8")
-
-url = "https://istudy.ntut.edu.tw/login.php";
-
-encodedBytes = base64.b64encode(inputpassword.encode("utf-8"))
-password1 = str(encodedBytes, "utf-8")
-
-post_data = {
-		"reurl"        : ""     ,
-		"login_key"   : login_key ,    
-		"encrypt_pwd"   : encrypt_pwd ,  
-		"username"   : inputuserid ,  
-		"password"   : len(inputpassword) * '*' ,  
-		"password1"   : password1 ,  
-	}
-
-result = res.post(url , data = post_data )
-'''
 print("登入成功")
 
 #-------------------------取得課程名稱-------------------------#
@@ -165,7 +134,7 @@ url = "https://istudy.ntut.edu.tw/learn/mooc_sysbar.php"
 result = res.get(url)
 
 soup = BeautifulSoup(result.text, 'html.parser')
-soup = soup.find( id = "selcourse" );
+soup = soup.find( id = "selcourse" )
 soup = soup.find_all( "option" )[1:]
 
 course_name_list = []
@@ -285,7 +254,7 @@ for item in items:
 	base = resource.get("xml:base")
 	file['href'] = (base if base != None else '') + '@' + resource.get("href")
 	file['name'] = item.text.split("\t")[0].replace("\n" , "")
-	if '[錄]' in file['name']:
+	if '[錄]' not in file['name']:
 		continue
 	file_list.append(file)
 
@@ -315,7 +284,8 @@ error_file_char = [ "/" , "|" ,'\\',"?",'"' ,'*' ,":" ,"<" ,">" , \
 					"/" , "："]
 file_extension = str()
 file_url       = str()
-
+video_list = []
+videoName = []
 
 exist_file = os.listdir(store_location)
 for index,file_item in enumerate(file_list):
@@ -331,105 +301,34 @@ for index,file_item in enumerate(file_list):
 	url = "https://istudy.ntut.edu.tw/learn/path/SCORM_fetchResource.php"
 
 	result = res.post(url , data = download_data , allow_redirects=False)
-	referer_url = None
-	if result.is_redirect:  #發生需要重新導向 代表出現檔案預覽畫面
-		rsps = res.resolve_redirects(result, result.request)
-		for rsp in rsps:
-			url = rsp.url.replace("download_preview" , "download")
-			break
-	else:
-		try:
-			re_sreach = r"\"(?P<url>https?:\/\/[\w|\:|\/|\.|\+|\s|\?|%|#|&|=]+)\""  #檢測http或https開頭網址
-			re_result = re.search(re_sreach, result.text)
-			if re_result != None:
-				file_url = re_result.groupdict()['url']
-				print( "\n" + filename + "\n這是連結  " + file_url , end = "\n\n")
-				continue
-			else:
-				re_sreach= r"\"(?P<url>\/.+)\""  #檢測/ 開頭網址
-				re_result = re.search(re_sreach, result.text)
-				if re_result != None:
-					file_url = re_result.groupdict()['url']
-					url = "https://istudy.ntut.edu.tw" + file_url;
-				else:
-					re_sreach= r"\"(?P<url>.+)\""
-					file_url = re.search(re_sreach, result.text).groupdict()['url']
-					url = "https://istudy.ntut.edu.tw/learn/path/" + file_url;   #是PDF預覽畫面
-					referer_url = url
-					result = res.get( url );
-					re_sreach= r"DEFAULT_URL.+['|\"](?P<url>.+)['|\"]"  #取得真實連接
-					file_url = re.search(re_sreach, result.text).groupdict()['url']
-					url = "https://istudy.ntut.edu.tw/learn/path/" + file_url;
-		except:
-			print(filename , "無法下載")
-			continue
-			
 	
-	if referer_url == None:
-		referer_url = url
-	file_url = url
-	#-------------------------處理下載檔名並開使下載-------------------------#
-	
-	for char in error_file_char: #去除檔名違法字元
-		filename = filename.replace(char," ")
-	with closing(res.get(file_url, stream=True , headers = {"referer" : referer_url} )) as response:
-		#取得下載檔名
-		if '.' not in filename:  #代表沒有原始檔名已經有副檔名
-			file_net_name = str()
-			if response.headers.__contains__('content-disposition'):  #檢查網路是否有檔名
-				file_net_name = response.headers['content-disposition']
-				re_sreach= r"('|\")(?P<name>.+)('|\")"
-				file_net_name = re.search(re_sreach, file_net_name ).groupdict()['name']
-			elif response.headers.__contains__('content-type'): #檢查文件屬性
-				content_type = response.headers['content-type']
-				if "pdf" in content_type: 
-					file_net_name = ".pdf"
-			elif '.' in file_url.split("/")[-1]:  #最後方式 從下載連結最後面取的
-				print( file_url )
-				file_net_name = file_url.split("/")[-1]
+	re_sreach = r"[\"|'](?P<url>https?:\/\/[\w|\:|\/|\.|\+|\s|\?|%|#|&|=|-]+)[\"|']"  #檢測http或https開頭網址
+	re_result = re.search(re_sreach, result.text)
+	if re_result != None:
+		file_url = re_result.groupdict()['url']
+		print(file_url)
+		if 'istream.ntut.edu.tw' in file_url:
+			print( "\n" + filename , end = '\n')
+			query = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(file_url).query))
+			result = res.get(file_url)
+			soup = BeautifulSoup(result.text, 'html.parser')
+			sourse_list = soup.find_all("source")
 			
-			if file_net_name == '':#所有方式都失敗了 直接當成pdf
-				print ( "無法找出檔案副檔名直接當成PDF儲存，可能檔案已毀損")
-				file_net_name = ".pdf"
-			file_extension = file_net_name.split('.')[-1]
-			filename = filename + "." + file_extension
-		
-		
-		#處理下載大小進度條
-		if response.headers.__contains__('content-length'):
-			file_size = response.headers['content-length']  
-		else:
-			file_size = 0;
-		
-		
-		if filename in exist_file:
-			display = get_display( 80 , filename)
-			print("{:s} 已存在".format(display))
-			continue
-		
-		new_exist_file = os.listdir(store_location)
-		
-		repeat_file_name = filename
-		time = 1
-		while repeat_file_name in new_exist_file:  #解決命名重複
-			repeat_file_name = filename.split('.')[0] + '_' + str(time) + '.' + filename.split('.')[1]
-		filename = repeat_file_name
-		
-		
-		chunk_size = 1024 # 單次請求最大值
-		content_size = int(file_size) # 內容體總大小
-		progress = ProgressBar(filename, total=content_size,
-										 unit="KB", chunk_size=chunk_size, run_status="正在下載", fin_status="下載完成")
-		with open(store_location + "\\" + filename,'wb') as file:
-			for data in response.iter_content(chunk_size=chunk_size):
-				file.write(data)
-				progress.refresh(count=len(data))
-		file.close()
-		progress.endPrint()
+			for n in sourse_list:
+				name = n.get('id')
+				if name != None:
+					print( '{}'.format(name) )
+					savename = filename +  "_" + name + ".mp4"
+					#-------------------------等待用戶選擇-------------------------#
+					select = input('按Enter下載 or 輸入(Y/N):')
+					if 'n' in select.lower():
+						continue
+					else:
+						video_list.append("https://istream.ntut.edu.tw/videoplayer/" + n.get('src'))
+						videoName.append(savename)
+						
+os.system('cls')
+downloadMain(video_list,videoName,store_location) #呼叫download.py 裡面的函數
+# print(video_list,videoName,store_location)
 
-
-
-input("按任意建結束");
-
-
-
+# input("按任意建結束");
